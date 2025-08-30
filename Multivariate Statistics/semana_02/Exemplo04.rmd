@@ -1,0 +1,226 @@
+---
+title: "Exemplo4"
+output: pdf_document
+
+
+---
+---
+title: "Exedmplo4"
+output:
+  pdf_document: default
+  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(scipen = 9999) #para retirar a nOtação científica
+```
+
+
+```{r leitura_dados, include=FALSE}
+setwd("C:/Users/gustavo.telles/Desktop/Programa/Estatistica Multivariada")
+library(tidyverse)
+library(readxl)
+dados= read_xlsx("Aula 01.xlsx", sheet = "Exemplo4")
+library(RColorBrewer)
+library(knitr)
+library(car)
+
+```
+
+
+
+
+EXEMPLO 4
+
+Uma equipe de “Fórmula qualquer coisa” contratou um ex-aluno da ESPM para ajudá-la a 
+melhorar a performance do piloto Ré-binho nas pistas. Foi resolvido, então, analisar a 
+influência de diversos parâmetros no tempo em que o carro levava para dar uma volta inteira 
+no circuito.
+
+A base de dados Aula 01.xlsx (planilha Exemplo 4) contém as seguintes informações:
+- tempo para completar a volta (em segundos)
+- peso do carro ao iniciar a volta (em quilos)
+- potencia do motor (em cavalos)
+- combustivel: quantidade de combustível (em litros) no início da volta
+- aerofolio: presença de aerofólio no carro (sim ou nao)
+- pneu: maciez do pneu (macio ou rigido)
+
+Agora, temos que:
+
+variável dependente: tempo
+
+variáveis independentes: potência, combustível, peso, aerofolio e pneu (sendo que as 2 últimas são qualitativas)
+
+Então, será necessário criar variáveis dummies (que recebem valor 0 ou 1) para utilizar as variáveis QUALItativas na regressão linear múltipla. As categorias escolhidas como referência devem sempre receber o valor 0.
+
+Neste exemplo pneu="macio" e aerofolio="nao" serão as categorias de referência.
+
+
+```{r dummies, echo=FALSE}
+dados$aerofolio=factor(dados$aerofolio,
+levels=c("nao","sim"))
+dados$pneu=factor(dados$pneu,
+levels=c("macio","rigido"))
+```
+
+11) Gráfico de dispersão + linha de tendência:
+```{r graficos_dispersao, echo=TRUE, message=FALSE, warning=FALSE}
+library(ggplot2)
+# Tempo vs Combustível
+ggplot(dados, aes(x = combustivel, y = tempo)) +
+  geom_point(color = "green") +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Tempo vs Combustível", x = "Combustível (L)", y = "Tempo (s)")
+```
+
+```{r graficos_dispersao, echo=TRUE, message=FALSE, warning=FALSE}
+library(ggplot2)
+
+# Tempo vs Potência
+ggplot(dados, aes(x = potencia, y = tempo)) +
+  geom_point(color = "blue") +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Tempo vs Potência", x = "Potência (cv)", y = "Tempo (s)")
+```
+
+```{r graficos_dispersao, echo=TRUE, message=FALSE, warning=FALSE}
+library(ggplot2)
+# Tempo vs Peso
+ggplot(dados, aes(x = peso, y = tempo)) +
+  geom_point(color = "purple") +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Tempo vs Peso", x = "Peso (kg)", y = "Tempo (s)")
+```
+
+12) MATRIZ DE CORRELAÇÕES ENTRE TODAS AS VARIÁVEIS
+QUANTITATIVAS:
+```{r matriz_correlacao, echo=TRUE, message=FALSE, warning=FALSE}
+# Selecionando apenas as variáveis quantitativas
+dados_quanti <- dados %>%
+  select(tempo, peso, potencia, combustivel)
+
+# Calculando a matriz de correlação
+tab_correl <- round(cor(dados_quanti), 2)
+
+# Exibindo a matriz de correlação
+kable(tab_correl, caption = "Matriz de correlações entre variáveis quantitativas")
+```
+
+13) Verificação da multicolinearidade:
+```{r vif_modelo1, echo=TRUE, message=FALSE, warning=FALSE}
+# Ajustando o modelo apenas com variáveis quantitativas
+modelo1 <- lm(tempo ~ peso + potencia + combustivel, data = dados)
+
+# Calculando o VIF
+multicolinearidade1 <- round(vif(modelo1), 2)
+
+# Exibindo os VIFs
+kable(multicolinearidade1, caption = "VIF do Modelo1")
+```
+
+# Interpretação:
+# Se algum VIF > 5, há multicolinearidade e a variável correspondente deve ser considerada para remoção.
+
+```{r remover_multicolinearidade, echo=TRUE}
+# Correlação com tempo
+cor_peso <- abs(cor(dados$peso, dados$tempo))
+cor_combustivel <- abs(cor(dados$combustivel, dados$tempo))
+
+if (cor_peso < cor_combustivel) {
+  modelo2 <- lm(tempo ~ potencia + combustivel, data = dados)
+  variavel_removida <- "peso"
+} else {
+  modelo2 <- lm(tempo ~ potencia + peso, data = dados)
+  variavel_removida <- "combustivel"
+}
+
+# Novo VIF
+multicolinearidade2 <- round(vif(modelo2), 2)
+kable(multicolinearidade2, caption = paste("VIF após remover", variavel_removida))
+```
+
+15) Método de seleção de variáveis:
+```{r teste_hipotese_global, echo=TRUE}
+# Ajustando o modelo igual ao da imagem
+modelo3 <- lm(tempo ~ potencia + combustivel + aerofolio + pneu, data = dados)
+summary(modelo3)
+```
+
+16) Modelo final após o método de seleção de variáveis:
+```{r modelo_final, echo=TRUE}
+# Ajuste o modelo final apenas com as variáveis selecionadas (exemplo abaixo)
+# Substitua pelas variáveis que sobraram após o método de seleção
+modelo4 <- lm(tempo ~ potencia + aerofolio + pneu, data = dados)
+
+# Resumo dos coeficientes e testes de hipóteses
+resumo <- summary(modelo4)
+tabela6 <- round(resumo$coefficients, 3)
+
+# Intervalos de confiança dos coeficientes
+tabela7 <- round(confint(modelo4, level = 0.95), 3)
+
+# Exibir as tabelas formatadas
+kable(tabela6, caption = "Coeficientes e teste de hipóteses do modelo final")
+kable(tabela7, caption = "Intervalo de confiança dos coeficientes do modelo final")
+```
+
+17) Verificar se o intercepto deve ser zerado:
+```{r teste_intercepto, echo=TRUE}
+# Teste de hipótese do intercepto no modelo final
+# Veja o valor-p do intercepto em tabela6 (modelo4)
+valor_p_intercepto <- resumo$coefficients["(Intercept)", "Pr(>|t|)"]
+
+if (valor_p_intercepto > 0.05) {
+  # Ajusta modelo sem intercepto
+  modelo5 <- lm(tempo ~ potencia + aerofolio + pneu - 1, data = dados)
+  resumo5 <- summary(modelo5)
+  tabela8 <- round(resumo5$coefficients, 3)
+  tabela9 <- round(confint(modelo5, level = 0.95), 3)
+  kable(tabela8, caption = "Coeficientes e teste de hipóteses do modelo final sem intercepto")
+  kable(tabela9, caption = "Intervalo de confiança dos coeficientes do modelo final sem intercepto")
+} else {
+  cat("O valor-p do intercepto foi", round(valor_p_intercepto, 4), 
+      "- Não é necessário zerar o intercepto.")
+}
+```
+
+18) Interpretação dos coeficientes do modelo:
+
+
+```{r} 
+# Interpretação dos coeficientes
+
+'Intercepto (67,936):
+Representa o tempo estimado de volta (em segundos) para um carro com potência zero, sem aerofólio e com pneu macio.
+Observação: No contexto, potência zero não é possível, então o intercepto não tem interpretação prática direta.
+'
+'potencia (-0,026):
+Para cada aumento de 1 cv na potência do motor, o tempo de volta diminui, em média, 0,026 segundos, mantendo as demais variáveis constantes.
+' 
+'aerofoliosim (-2,844):
+Carros com aerofólio completam a volta, em média, 2,844 segundos mais rápido do que carros sem aerofólio, mantendo as demais variáveis constantes.
+' 
+'pneurigido (3,593):
+Carros com pneu rígido levam, em média, 3,593 segundos a mais para completar a volta do que carros com pneu macio, mantendo as demais variáveis constantes.
+'
+```
+
+19) Centralização das médias das variáveis explicativas:
+```{r modelo_centralizado, echo=TRUE}
+# Centralizando a variável quantitativa do modelo final
+dados$potencia_c <- dados$potencia - mean(dados$potencia)
+
+# Ajustando o modelo com a variável centralizada
+modelo5 <- lm(tempo ~ potencia_c + aerofolio + pneu, data = dados)
+resumo5 <- summary(modelo5)
+tabela8 <- round(resumo5$coefficients, 2)
+tabela9 <- round(confint(modelo5, level = 0.95), 2)
+
+# Exibindo as tabelas formatadas
+kable(tabela8, caption = "Estimativas dos coeficientes do Modelo 5 (centralizado)")
+kable(tabela9, caption = "Intervalo de confiança dos coeficientes do Modelo 5 (centralizado)")
+
+# Mostrando a média da variável centralizada
+cat("A média da variável potencia é:", round(mean(dados$potencia), 2), "\n")
+```
