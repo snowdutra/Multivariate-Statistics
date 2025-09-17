@@ -1,5 +1,5 @@
 ---
-title: "Aula02"
+title: "regressao_mercado"
 output:
   pdf_document: default
 ---
@@ -248,5 +248,3 @@ cat("O valor do R-quadrado ajustado é:", round(resumo$adj.r.squared * 100, 2), 
 
 
 Então, chegamos à conclusão que o modelo obtido não é adequado para realizar previsões do volume de transações do mercado já que JUROS e EMBI só conseguem explicar 3,79% da variabilidade do volume de transações.
-
-

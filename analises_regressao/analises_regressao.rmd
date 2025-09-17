@@ -1,0 +1,54 @@
+---
+title: "analises_regressao"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(scipen = 9999) #para retirar a nOtação científica
+```
+
+```{r leitura_dados, include=FALSE}
+setwd("C:/Users/gustavo.telles/Desktop/Programa/Multivariate-Statistics/csv")
+library(tidyverse)
+library(readxl)
+dados <- read_xlsx("Aula 01.xlsx", sheet = "Exemplo4")
+library(RColorBrewer)
+library(knitr)
+library(car)
+```
+
+# ...existing code from exemplo_04.rmd...
+
+EXEMPLO 4
+
+Uma equipe de “Fórmula qualquer coisa” contratou um ex-aluno da ESPM para ajudá-la a 
+melhorar a performance do piloto Ré-binho nas pistas. Foi resolvido, então, analisar a 
+influência de diversos parâmetros no tempo em que o carro levava para dar uma volta inteira 
+no circuito.
+
+A base de dados Aula 01.xlsx (planilha Exemplo 4) contém as seguintes informações:
+- tempo para completar a volta (em segundos)
+- peso do carro ao iniciar a volta (em quilos)
+- potencia do motor (em cavalos)
+- combustivel: quantidade de combustível (em litros) no início da volta
+- aerofolio: presença de aerofólio no carro (sim ou nao)
+- pneu: maciez do pneu (macio ou rigido)
+
+Agora, temos que:
+
+variável dependente: tempo
+
+variáveis independentes: potência, combustível, peso, aerofolio e pneu (sendo que as 2 últimas são qualitativas)
+
+Então, será necessário criar variáveis dummies (que recebem valor 0 ou 1) para utilizar as variáveis QUALItativas na regressão linear múltipla. As categorias escolhidas como referência devem sempre receber o valor 0.
+
+Neste exemplo pneu="macio" e aerofolio="nao" serão as categorias de referência.
+
+```{r dummies, echo=FALSE}
+dados$aerofolio <- factor(dados$aerofolio, levels = c("nao", "sim"))
+dados$pneu <- factor(dados$pneu, levels = c("macio", "rigido"))
+```
+
+# ...existing code from exemplo_04.rmd continues...
+
