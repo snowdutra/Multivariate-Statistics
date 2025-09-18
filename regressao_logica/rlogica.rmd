@@ -1,0 +1,109 @@
+---
+title: "Regressão Logística Multinomial"
+output:
+  html_document: default
+  pdf_document: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r bibliotecas, echo=FALSE}
+setwd("C:\\Users\\gustavo.telles\\Documents\\GitHub\\Multivariate-Statistics\\regressao_logica") # nolint
+library(tinytex)
+library(readxl)
+library(tidyverse)
+library(knitr)
+library(caret) # Classification And REgression Training
+library(gridExtra) # organizar e combinar múltiplos gráficos ou elementos gráficos em uma mesma visualização # nolint
+library(classifierplots) # para visualização de resultados de modelos de classificação # nolint
+library(GGally) # obtém matriz de correlação
+library(pROC) # Alternativa para curva ROC
+library(nnet) # Para regressão logística multinomial
+
+dados = read_xlsx("transporte.xlsx") # nolint
+```
+
+Utilizamos variáveis de categorias nominais.
+O tamanho do modelo aumenta.
+* Não calculamos o VIF.
+
+A variável dependente (y) tem 3 ou mais categorias a partir de agora. As variáveis explicativas (x´s) podem ser qualitativas e/ou quantitativas. Quando foram quantitativas, verificamos a multicolinearidade. E, quando forem qualitativas, criamos dummies. # nolint
+
+```{r particao, echo=FALSE}
+# Suponha que sua base de dados total chame-se dados:
+# Configurar uma semente para gerar resultados reproduzíveis
+set.seed(123)
+# Criando o sorteio da partição de acordo com uma proporção específica
+flag=createDataPartition(dados$transporte, p= 0.67, list = F) # nolint
+# 0.67 é mais ou menos 2/3 dos dados para a amostra de treino
+
+# criando a base de dados de treino
+train=dados[flag,] # nolint
+# criando a base de dados de teste
+test=dados[-flag,] # nolint
+```
+
+
+# Análise Descritiva
+
+Usamos o boxplot, pois as variáveis são quantitativas.
+
+```{r grafico, echo=FALSE}
+
+train$transporte = factor(train$transporte, levels = c('carro', 'onibus', 'bicicleta')) #carro vira a ref. # nolint
+
+graf1 = ggplot(train, aes(y = renda, x = transporte))+ geom_boxplot(fill="red") # nolint
+graf2 = ggplot(train, aes(y = distancia, x = transporte))+ geom_boxplot(fill="blue") # nolint 
+graf3 = ggplot(train, aes(y = idade, x = transporte))+ geom_boxplot(fill="yellow") # nolint
+grid.arrange(graf1, graf2, graf3, nrow = 1)
+```
+
+
+# Verificação da multicolinearidade
+
+Como na regressão logística multinomial não calcularemos o VIF, não é necessário ajustar um modelo antes de obeservar as correlações significativas:
+
+```{r modelo, echo=FALSE}
+#obtendo a matriz de correlação
+ggpairs(train)
+```
+
+((A maior correlação está entre idade e renda -> 0,47. Aproveitando os boxplots, percebemos que a renda diferenciou mais o uso do transporte, logo tiramos a idade que diferencia menos e não afeta tanto o modelo.))
+
+Avaliando a matriz de correlação, temos que as seguintes correlações são sifgnificativas:
+
+* correl*(idade, renda)* = 0,470
+
+* correl*(idade, distancia)* = 0,180
+
+* correl*(renda, distancia)* = 0,130
+
+Ou seja, cada uma delas tem 2 correlações significativas. Logo, pela quantidade de correlações significativas não é possível tomar uma decisão sobre a retirada.
+
+A maior correlação significativa era entre idade e renda, portanto, uma delas deve ser eliminada. Podemos seguir uma das estratégias:
+
+* retirar a variável que pelo boxplot mostrou que diferencia MENOS as categorias de transporte
+
+* retirar a variável que apresenta a MAIOR correlação com as outras
+
+Neste caso, a decisão seria retirar a idade por ambas as estratégias.
+
+# Modelo logístico preliminar
+
+```{r modelo1, echo=FALSE}
+#retiramos a variável idade
+modelo1 = multinom(transporte ~ renda + distancia, data = train) # nolint
+resumo1 = summary(modelo1) # nolint
+kable(round(resumo1$coefficients ,2), caption = "Modelo logístico preliminar") # nolint
+```
+
+
+# Modelo ótimo
+
+```{r otimo, echo=FALSE}
+
+modelo_otimo=step(modelo1, trace = FALSE) # nolint
+resumo2=summary(modelo_otimo) # nolint
+kable(round(resumo2$coefficients ,2), caption = "Modelo logístico ótimo") # nolint
+```
